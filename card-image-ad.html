@@ -1,0 +1,166 @@
+<link rel="import" href="../polymer/polymer-element.html">
+<link rel="import" href="../soso-text-input/soso-text-input.html">
+<link rel="import" href="../soso-file-picker/soso-file-picker.html">
+
+<dom-module id="card-image-ad-composer">
+  <template>
+    <style>
+      .container {
+        max-width: 320px;
+        padding: 10px;
+        margin: 25px auto;
+      }
+
+      #filePicker {
+        width: 300px;
+        height: 250px;
+        margin: 25px auto;
+        box-sizing: border-box;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        -webkit-user-select: none;
+        user-select: none;
+        font-size: inherit;
+        color: inherit;
+        position: relative;
+        z-index: 1;
+        font-weight: inherit;
+      }
+
+      soso-text-input {
+        margin: 10px 0;
+      }
+
+      #title {
+        font-size: 18px;
+      }
+    </style>
+    <div class="container">
+      <h2>Ad card linked to external site</h2>
+      <soso-file-picker id="filePicker" label="Drag image file" accept="image/*" on-files="_onFile"></soso-file-picker>
+      <soso-text-input id="title" label="Title" placeholder="Title" on-input="_onInput"></soso-text-input>
+      <soso-text-input id="text" label="Text" placeholder="Text" on-input="_onInput"></soso-text-input>
+      <soso-text-input id="link" label="URL to external site" placeholder="URL to external site" on-input="_onInput"></soso-text-input>
+    </div>
+  </template>
+  <script>
+    class CardImageAdComposer extends Polymer.Element {
+      static get is() { return 'card-image-ad-composer'; }
+      static get properties() {
+        return {
+          services: Object,
+          initialState: Object,
+          author: Object
+        };
+      }
+
+      connectedCallback() {
+        super.connectedCallback();
+        this._ready = false;
+      }
+
+      _onInput() {
+        this._refreshReady();
+      }
+
+      _refreshReady() {
+        const ready = this._imageId && this.$.title.value && /^https?\:\/\/\S+$/i.test(this.$.link.value.trim());
+        if (ready && !this._ready) {
+          this._ready = ready;
+          this.dispatchEvent(new CustomEvent('state-ready-change', { bubbles: true, composed: true, detail: { ready: ready } }));
+        } else {
+          this._ready = ready;
+        }
+      }
+
+      _onFile() {
+        let file = event.detail.file;
+        if (!file) {
+          this._file = null;
+          this.$.filePicker.clear();
+          this._imageUrl = null;
+          this._imageId = null;
+          this._refreshReady();
+          return;
+        }
+        if (file.type.indexOf('image/') != 0) {
+          setTimeout(() => {
+            this.$.filePicker.clear();
+            this._file = null;
+            this._imageUrl = this.image;
+            this._imageId = null;
+            this._refreshReady();
+          });
+        } else {
+          this.services.upload(file).then((response) => {
+            this._imageId = response.fileId;
+            this._imageURL = response.url;
+            this._refreshReady();
+          }).catch((err) => {
+            this.$.filePicker.clear();
+            this._imageId = null;
+            this._imageURL = null;
+            this._refreshReady();
+            console.error(err);
+          });
+        }
+      }
+
+      get isReady() {
+        return this._ready;
+      }
+
+
+      get summary() {
+        return {
+          imageURL: this._imageURL,
+          imageId: this._imageId,
+          title: this.$.title.value,
+          text: this.$.text.value,
+          linkURL: this.$.link.value.trim()
+        };
+      }
+
+      get sharedState() {
+        return {
+          properties: {},
+          collections: {},
+          files: {}
+        };
+      }
+
+      get searchText() {
+        return null;
+      }
+    }
+    window.customElements.define(CardImageAdComposer.is, CardImageAdComposer);
+  </script>
+</dom-module>
+
+<dom-module id="card-image-ad-viewer">
+  <template>
+    <div>
+      <div>[[sharedState.properties.message]]</div>
+    </div>
+  </template>
+  <script>
+    class CardImageAdViewer extends Polymer.Element {
+      static get is() { return 'card-image-ad-viewer'; }
+      static get properties() {
+        return {
+          // Following are populated by the container
+          sharedState: Object,    // .properties .collections
+          author: Object,         // .handle, .name, .imageUrl
+          user: Object            // .handle, .name, .imageUrl
+        };
+      }
+
+      connectedCallback() {
+        super.connectedCallback();
+        // initialize your viewer here using properties and/or collections
+        // in this.sharedState
+      }
+    }
+    window.customElements.define(CardImageAdViewer.is, CardImageAdViewer);
+  </script>
+</dom-module>
