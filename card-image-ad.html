@@ -1,6 +1,7 @@
 <link rel="import" href="../polymer/polymer-element.html">
 <link rel="import" href="../soso-text-input/soso-text-input.html">
 <link rel="import" href="../soso-file-picker/soso-file-picker.html">
+<link rel="import" href="../soso-icon/soso-icon.html">
 
 <dom-module id="card-image-ad-composer">
   <template>
@@ -34,12 +35,37 @@
       #title {
         font-size: 18px;
       }
+
+      #imagePanel {
+        position: relative;
+      }
+
+      #image {
+        width: 300px;
+        height: 250px;
+        background-size: cover;
+        background-origin: border-box;
+        background-position: 50% 50%;
+        border-radius: 3px 3px 0 0;
+        overflow: hidden;
+      }
     </style>
     <div class="container">
-      <h2>Ad card linked to external site</h2>
-      <soso-file-picker id="filePicker" label="Drag image file" accept="image/*" on-files="_onFile"></soso-file-picker>
+      <h2>Advertising Card</h2>
+      <p>This creates a card used for advertising that you will pay others to view.</p>
+      <p>Choose how this card appears in a feed and what website will open when the user taps on the card.</p>
+      <div id="imagePickerPanel">
+        <soso-file-picker id="filePicker" label="Drag image for the top of the card" accept="image/*" on-files="_onImageFile"></soso-file-picker>
+        <div id="imageProgress" style="display:none;">
+          <div>uploading...</div>
+        </div>
+      </div>
+      <div id="imagePanel" style="display:none;">
+        <img id="image">
+        <soso-icon id="imageClose" icon-map="[[iconMap]]" icon="close" on-click="_onImageClose"></soso-icon>
+      </div>
       <soso-text-input id="title" label="Title" placeholder="Title" on-input="_onInput"></soso-text-input>
-      <soso-text-input id="text" label="Text" placeholder="Text" on-input="_onInput"></soso-text-input>
+      <soso-text-input id="text" label="Description" placeholder="Description" on-input="_onInput"></soso-text-input>
       <soso-text-input id="link" label="URL to external site" placeholder="URL to external site" on-input="_onInput"></soso-text-input>
     </div>
   </template>
@@ -49,22 +75,65 @@
       static get properties() {
         return {
           services: Object,
-          initialState: Object,
-          author: Object
+          initialState: {
+            type: Object,
+            observer: "_onInitialState"
+          },
+          author: Object,
+          iconMap: Object,
+          _imageUrl: String
         };
       }
 
       connectedCallback() {
         super.connectedCallback();
+        this.set('iconMap', {
+          "close": "M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"
+        });
         this._ready = false;
+        this._refresh();
+      }
+
+      _onInitialState() {
+        if (this.initialState && this.initialState.shared && this.initialState.shared.files) {
+          for (const fileId of Object.keys(this.initialState.shared.files)) {
+            const fileInfo = this.initialState.shared.files[fileId];
+            if (fileInfo.key === 'image') {
+              this._imageFileId = fileId;
+              this._imageUrl = fileInfo.url;
+            }
+          }
+        }
+        if (this.initialState && this.initialState.shared && this.initialState.shared.properties) {
+          let props = this.initialState.shared.properties;
+          this.$.title.value = props.title || "";
+          this.$.text.value = props.text || "";
+        }
+        this._refresh();
       }
 
       _onInput() {
         this._refreshReady();
       }
 
+      _onImageClose() {
+        this.$.imagePicker.clear();
+        this._imageUrl = null;
+        this._imageFileId = null;
+        this._refresh();
+      }
+
+      _refresh() {
+        this.$.imagePickerPanel.style.display = this._imageUrl ? false : true;
+        this.$.imagePanel.style.display = this._imageUrl ? true : false;
+        if (this._imageUrl) {
+          this.$.image.style.backgroundImage = 'url(' + this._imageUrl + ')'; //  + "https://channels.cc/9adcbca5-13ee-44ea-99f3-9adb6588fd0c/thumbnail)"; // 
+        }
+        this._refreshReady();
+      }
+
       _refreshReady() {
-        const ready = this._imageId && this.$.title.value && /^https?\:\/\/\S+$/i.test(this.$.link.value.trim());
+        const ready = this._imageFileId && this.$.title.value && /^https?\:\/\/\S+$/i.test(this.$.link.value.trim());
         if (ready && !this._ready) {
           this._ready = ready;
           this.dispatchEvent(new CustomEvent('state-ready-change', { bubbles: true, composed: true, detail: { ready: ready } }));
@@ -73,48 +142,32 @@
         }
       }
 
-      _onFile() {
-        let file = event.detail.file;
-        if (!file) {
-          this._file = null;
-          this.$.filePicker.clear();
+      _onImageFile(event) {
+        this.$.imageProgress.style.display = "";
+        this.services.upload(event.detail.file).then((response) => {
+          this.$.imageProgress.style.display = "none";
+          this.set('_imageUrl', response.url);
+          this._imageFileId = response.fileId;
+          this._refresh();
+        }).catch((err) => {
+          this.$.imageProgress.style.display = "none";
+          this.$.imagePicker.clear();
           this._imageUrl = null;
-          this._imageId = null;
-          this._refreshReady();
-          return;
-        }
-        if (file.type.indexOf('image/') != 0) {
-          setTimeout(() => {
-            this.$.filePicker.clear();
-            this._file = null;
-            this._imageUrl = this.image;
-            this._imageId = null;
-            this._refreshReady();
-          });
-        } else {
-          this.services.upload(file).then((response) => {
-            this._imageId = response.fileId;
-            this._imageURL = response.url;
-            this._refreshReady();
-          }).catch((err) => {
-            this.$.filePicker.clear();
-            this._imageId = null;
-            this._imageURL = null;
-            this._refreshReady();
-            console.error(err);
-          });
-        }
+          this._imageFileId = null;
+          this._refresh();
+          console.error(err);
+          this._setError("Failed to load image file");
+        });
       }
 
       get isReady() {
         return this._ready;
       }
 
-
       get summary() {
         return {
           imageURL: this._imageURL,
-          imageId: this._imageId,
+          imageId: this._imageFileId,
           title: this.$.title.value,
           text: this.$.text.value,
           linkURL: this.$.link.value.trim()
@@ -122,11 +175,18 @@
       }
 
       get sharedState() {
-        return {
-          properties: {},
+        const result = {
+          properties: {
+            title: this.$.title.value,
+            text: this.$.text.value
+          },
           collections: {},
           files: {}
         };
+        if (this._imageFileId) {
+          result.files[this._imageFileId] = { key: "image", url: this._imageUrl };
+        }
+        return result;
       }
 
       get searchText() {
