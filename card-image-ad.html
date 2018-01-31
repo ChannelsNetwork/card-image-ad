@@ -7,7 +7,7 @@
   <template>
     <style>
       .container {
-        max-width: 320px;
+        max-width: 600px;
         padding: 10px;
         margin: 25px auto;
       }
@@ -49,13 +49,19 @@
         border-radius: 3px 3px 0 0;
         overflow: hidden;
       }
+
+      .explain {
+        margin-bottom: 25px;
+      }
     </style>
     <div class="container">
-      <h2>Advertising Card</h2>
-      <p>This creates a card used for advertising that you will pay others to view.</p>
-      <p>Choose how this card appears in a feed and what website will open when the user taps on the card.</p>
+      <div class="explain">
+        <h2>Advertising Card</h2>
+        <p>This creates a card used for advertising that you will pay others to view.</p>
+        <p>Choose how this card appears in a feed and what website will open when the user taps on the card.</p>
+      </div>
       <div id="imagePickerPanel">
-        <soso-file-picker id="filePicker" label="Drag image for the top of the card" accept="image/*" on-files="_onImageFile"></soso-file-picker>
+        <soso-file-picker id="filePicker" label="Drag card image" accept="image/*" on-files="_onImageFile"></soso-file-picker>
         <div id="imageProgress" style="display:none;">
           <div>uploading...</div>
         </div>
@@ -124,8 +130,8 @@
       }
 
       _refresh() {
-        this.$.imagePickerPanel.style.display = this._imageUrl ? false : true;
-        this.$.imagePanel.style.display = this._imageUrl ? true : false;
+        this.$.imagePickerPanel.style.display = this._imageUrl ? "none" : "";
+        this.$.imagePanel.style.display = this._imageUrl ? "" : "none";
         if (this._imageUrl) {
           this.$.image.style.backgroundImage = 'url(' + this._imageUrl + ')'; //  + "https://channels.cc/9adcbca5-13ee-44ea-99f3-9adb6588fd0c/thumbnail)"; // 
         }
