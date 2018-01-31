@@ -12,7 +12,7 @@
         margin: 25px auto;
       }
 
-      #filePicker {
+      #imagePicker {
         width: 300px;
         height: 250px;
         margin: 25px auto;
@@ -37,8 +37,13 @@
       }
 
       #imagePanel {
+        text-align: center;
+      }
+
+      .innerImagePanel {
         position: relative;
         text-align: center;
+        display: inline-block;
       }
 
       #image {
@@ -74,14 +79,16 @@
         <p>Choose how this card appears in a feed and what website will open when the user taps on the card.</p>
       </div>
       <div id="imagePickerPanel">
-        <soso-file-picker id="filePicker" label="Drag card image" accept="image/*" on-files="_onImageFile"></soso-file-picker>
+        <soso-file-picker id="imagePicker" label="Drag card image" accept="image/*" on-files="_onImageFile"></soso-file-picker>
         <div id="imageProgress" style="display:none;">
           <div>uploading...</div>
         </div>
       </div>
       <div id="imagePanel" style="display:none;">
-        <img id="image">
-        <soso-icon id="imageClose" icon-map="[[iconMap]]" icon="close" on-click="_onImageClose"></soso-icon>
+        <div class="innerImagePanel">
+          <img id="image">
+          <soso-icon id="imageClose" icon-map="[[iconMap]]" icon="close" on-click="_onImageClose"></soso-icon>
+        </div>
       </div>
       <soso-text-input id="title" label="Title" placeholder="Title" on-input="_onInput"></soso-text-input>
       <soso-text-input id="text" label="Description" placeholder="Description" on-input="_onInput"></soso-text-input>
