@@ -75,6 +75,10 @@
       #imageProgress {
         text-align: center;
       }
+
+      .error {
+        color: red;
+      }
     </style>
     <div class="container">
       <div class="explain">
@@ -97,6 +101,7 @@
       <soso-text-input id="title" label="Title" placeholder="Title" on-input="_onInput"></soso-text-input>
       <soso-text-input id="text" label="Description" placeholder="Description" on-input="_onInput"></soso-text-input>
       <soso-text-input id="link" label="URL to external site" placeholder="URL to external site" on-input="_onInput"></soso-text-input>
+      <div class="error">[[_errorMessage]]</div>
     </div>
   </template>
   <script>
@@ -111,7 +116,8 @@
           },
           author: Object,
           iconMap: Object,
-          _imageUrl: String
+          _imageUrl: String,
+          _errorMessage: String
         };
       }
 
@@ -143,6 +149,7 @@
       }
 
       _onInput() {
+        this._errorMessage = "";
         this._refreshReady();
       }
 
@@ -154,16 +161,25 @@
       }
 
       _refresh() {
+        this._errorMessage = "";
         this.$.imagePickerPanel.style.display = this._imageUrl ? "none" : "";
         this.$.imagePanel.style.display = this._imageUrl ? "" : "none";
         if (this._imageUrl) {
-          this.$.image.style.backgroundImage = 'url(' + this._imageUrl + ')'; //  + "https://channels.cc/9adcbca5-13ee-44ea-99f3-9adb6588fd0c/thumbnail)"; // 
+          this.$.image.style.backgroundImage = 'url(' + this._imageUrl + ')';
         }
         this._refreshReady();
       }
 
       _refreshReady() {
-        const ready = this._imageFileId && this.$.title.value && /^https?\:\/\/\S+$/i.test(this.$.link.value.trim());
+        const validUrl = /^https?\:\/\/\S+$/i.test(this.$.link.value.trim());
+        if (this.$.link.value.trim().length > 0 && !validUrl) {
+          if (this.$.link.value.trim().toLowerCase().indexOf('http') === 0) {
+            this._errorMessage = "Invalid URL";
+          } else {
+            this._errorMessage = "Invalid URL.  Must start with http:// or https://";
+          }
+        }
+        const ready = this._imageFileId && this.$.title.value && validUrl;
         if (ready && !this._ready) {
           this._ready = ready;
           this.dispatchEvent(new CustomEvent('state-ready-change', { bubbles: true, composed: true, detail: { ready: ready } }));
@@ -186,7 +202,7 @@
           this._imageFileId = null;
           this._refresh();
           console.error(err);
-          this._setError("Failed to load image file");
+          this._errorMessage = "Failure loading image";
         });
       }
 
